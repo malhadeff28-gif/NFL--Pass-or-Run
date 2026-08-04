@@ -1,0 +1,63 @@
+# NFL Play-Call Predictor — project configuration
+# Everything a user is likely to want to change lives here.
+
+data:
+  # How many completed seasons of play-by-play to use (spec target: 8-12).
+  n_seasons: 10
+
+  # Explicit season list. If set (e.g. [2016, 2017, ...]) it overrides n_seasons
+  # and latest_completed_season entirely.
+  seasons: null
+
+  # Latest fully COMPLETED season. `null` = auto-detect (preferred).
+  # Auto-detection asks the nflverse schedule whether the Super Bowl has been
+  # played and scored, and only falls back to a calendar heuristic if that fails.
+  latest_completed_season: null
+
+  # Re-download even when a cached file already exists.
+  force_refresh: false
+
+  # Optional supplementary nflverse datasets. Each is probed for availability;
+  # anything that cannot be joined reliably is skipped and reported, never faked.
+  use_schedules: true       # game context + head coaches (home_coach / away_coach)
+  use_participation: true   # NGS pre-snap formation / personnel / defenders in box
+  use_ftn_charting: true    # FTN pre-snap motion / QB alignment (2022+ only)
+  use_injuries: true        # weekly injury / practice reports
+  use_depth_charts: true    # weekly depth charts
+  use_weekly_rosters: false # large; off by default (injuries+depth charts suffice)
+
+features:
+  # Minimum non-null share for an optional pre-snap column (e.g. offense_formation)
+  # to be admitted as a feature. Sparse NGS-derived columns get dropped below this.
+  min_coverage: 0.20
+
+  # `number_of_pass_rushers` is only observable AFTER the snap, so it is treated
+  # as leakage and excluded by default. Flip to true only if you accept that.
+  allow_post_snap_pass_rushers: false
+
+tendencies:
+  # Empirical-Bayes smoothing strength. A team/coach/defense split needs roughly
+  # this many prior plays before its own rate outweighs the league average.
+  smoothing_k: 50
+
+  # Window (in plays) for the "recent form" rolling tendency features.
+  rolling_window: 200
+
+split:
+  # Chronological, never random. Test = latest completed season,
+  # validation = the season before it, train = everything older.
+  test_seasons: 1
+  validation_seasons: 1
+
+model:
+  random_state: 42
+
+  # Randomised search budget for XGBoost hyper-parameter tuning.
+  n_search_iter: 30
+
+  # Probability calibration method applied on the validation season:
+  # "isotonic", "sigmoid", or "none".
+  calibration: isotonic
+
+  # Predicted PASS probability at/above this threshold is reported as PASS.
+  decision_threshold: 0.5
